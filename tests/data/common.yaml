@@ -6,4 +6,8 @@
 #
 ---
 data.app.domain.directory: /var/lib/app1
+data.app.files:
+  - one
+  - two
+  - three
 
