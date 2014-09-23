@@ -1,0 +1,70 @@
+#!/usr/bin/env ruby
+#
+#   Author: Rohith (gambol99@gmail.com)
+#   Date: 2014-09-23 12:06:18 +0100 (Tue, 23 Sep 2014)
+#
+#  vim:ts=2:sw=2:et
+#
+$:.unshift File.join(File.dirname(__FILE__),'.','../lib')
+require 'rubygems' if RUBY_VERSION < '1.9.0'
+require 'optionscrapper'
+require 'hiera-files'
+
+module HieraFiles
+  class CLI
+    def initialize
+      begin
+        parser.parse!
+        send options[:command] if options[:command]
+      rescue SystemExit => e
+        exit e.status
+      rescue Exception  => e
+        parser.usage e.message
+      end
+    end
+
+    private
+    def render
+      files do |file|
+        puts "checking file: #{file}"
+        puts hiera.render file
+      end
+    end
+
+    def files
+      Dir["#{options[:directory]}#{options[:filter]}"].select do |x|
+        if File.file?( x ) and File.readable?( x )
+          yield x if block_given?
+        end
+      end
+    end
+
+    def hiera
+      @hiera ||= HieraFiles::new( {
+        :hiera => options[:hiera]
+      })
+    end
+
+    def options
+      @options ||= {
+        :hiera  => "#{Dir.pwd}/hieradata",
+        :filter => "*.erb",
+      }
+    end
+
+    def parser
+      @parser ||= ::OptionScrapper::new do |o|
+        o.on( "-D", "--dry-run", "perform a dry-run of the configuration generation" ) { options[:dry_run] = true }
+        o.on( '-h DIRECTORY', '--hiera DIRECTORY', 'the directory holding the hiera data' ) { |x| options[:hiera] = x }
+        o.command :render, "render the configuration files from hiera data" do
+          o.command_alias :ren
+          o.on( "-f FILTER", "--filter FILTER", "a filter to the files in the directory" ) { |x| options[:filter] = x }
+          o.on( "-d DIRECTORY", "--directory DIRECTORY", "the directory containing the configuration files" ) { |x| options[:directory] = x }
+          o.on_command { options[:command] = :render }
+        end
+      end
+    end
+  end
+end
+
+HieraFiles::CLI.new

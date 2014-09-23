@@ -13,6 +13,7 @@ module HieraFiles
 
   autoload :Templater,  "#{ROOT}/hiera-files/templater"
   autoload :Utils,      "#{ROOT}/hiera-files/utils"
+  autoload :Errors,     "#{ROOT}/hiera-files/errors"
 
   def self.version
     HieraFiles::VERSION
