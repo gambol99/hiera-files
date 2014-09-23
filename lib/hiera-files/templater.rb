@@ -8,10 +8,12 @@ $:.unshift File.join(File.dirname(__FILE__),'.','./')
 require 'rubygems' if RUBY_VERSION < '1.9.0'
 require 'utils'
 require 'render'
+require 'config'
 
 module HieraFiles
   class Templater
     include HieraFiles::FileUtils
+    include HieraFiles::Config
 
     def initialize configuration
       validate_options( options( configuration ) )
@@ -27,34 +29,25 @@ module HieraFiles
 
     private
     def hiera
-      @hiera ||= Hiera.new( :config => default_hiera_config )
+      @hiera ||= Hiera.new( :config => options[:configuration] )
     end
 
     def options set_default_options = {}
-      @option ||= set_default_options
-    end
-
-    def default_hiera_config
-      @configuration ||= nil
-      unless @configuration
-        @configuration = {
-          :backends       => [ 'yaml' ],
-          :logger         => 'noop',
-          :hierarchy      => options[:hierarchy] || [ 'common' ],
-          :yaml           => {
-            :datadir => options[:hiera]
-          }
-        }
-        @configuration[:merge_behavior] = ( Gem::Specification::find_all_by_name('deep_merge').any? ) ? :deep_merge : :native
-      end
-      @configuration
+      @options ||= set_default_options
     end
 
     def validate_options options
-      # step: check we have a hiera data directory
-      raise ArgumentError, "you have not specified the hiera data directory" unless options[:hiera]
-      # step: check its a directory and readable
-      validate_directory options[:hiera]
+      # step: validate the configuration file
+      validate_file options[:config] if options[:config]
+      # step: load either the default configuation or the config file
+      options[:configuration] = YAML.load( ( options[:config] ) ? File.read(options[:config]) : Default_Configuration )
+      # step: allow for overrides for yaml backends only
+      if options[:directory]
+        configuration = options[:configuration]
+        raise ArgumentError, "we can only override yaml backends" unless configuration[:backends].include? 'yaml'
+        configuration[:yaml] ||= {}
+        configuration[:yaml][:datadir] = options[:directory]
+      end
       options
     end
   end

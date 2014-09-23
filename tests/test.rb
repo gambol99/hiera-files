@@ -9,7 +9,7 @@ $:.unshift File.join(File.dirname(__FILE__),'.','../lib')
 require 'hiera-files'
 
 Options = {
-  :hiera     => './data'
+  :directory => './data'
 }
 
 files = HieraFiles.new( Options )

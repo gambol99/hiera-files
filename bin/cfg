@@ -9,6 +9,7 @@ $:.unshift File.join(File.dirname(__FILE__),'.','../lib')
 require 'rubygems' if RUBY_VERSION < '1.9.0'
 require 'optionscrapper'
 require 'hiera-files'
+require 'pp'
 
 module HieraFiles
   class CLI
@@ -25,14 +26,16 @@ module HieraFiles
 
     private
     def render
-      files do |file|
-        puts "checking file: #{file}"
-        puts hiera.render file
+      files( options[:config_dir], options[:filter] ) do |file|
+        verbose "render file: #{file}"
+        output = hiera.render file
+        puts output if options[:verbose]
+        File.open( config_filename( file ), 'w' ) { |x| x.write output } if options[:write_files]
       end
     end
 
-    def files
-      Dir["#{options[:directory]}#{options[:filter]}"].select do |x|
+    def files directory, filter
+      Dir["#{directory}/#{filter}"].sort.select do |x|
         if File.file?( x ) and File.readable?( x )
           yield x if block_given?
         end
@@ -40,26 +43,44 @@ module HieraFiles
     end
 
     def hiera
-      @hiera ||= HieraFiles::new( {
-        :hiera => options[:hiera]
-      })
+      @hiera ||= nil
+      unless @hiera
+        hiera_options = {}
+        hiera_options[:config] = options[:config] if options[:config]
+        hiera_options[:directory] = options[:hiera_dir] if options[:hiera_dir]
+        @hiera ||= HieraFiles::new( hiera_options )
+      end
+      @hiera
+    end
+
+    def config_filename filename
+      filename.gsub( /\.erb/, '')
+    end
+
+    def verbose message = ''
+      puts "[verbose] : #{message}" if options[:verbose]
     end
 
     def options
       @options ||= {
-        :hiera  => "#{Dir.pwd}/hieradata",
-        :filter => "*.erb",
+        :hiera_dir  => './hieradata',
+        :config_dir => './',
+        :filter     => '*.erb',
+        :verbose    => false
       }
     end
 
     def parser
       @parser ||= ::OptionScrapper::new do |o|
-        o.on( "-D", "--dry-run", "perform a dry-run of the configuration generation" ) { options[:dry_run] = true }
-        o.on( '-h DIRECTORY', '--hiera DIRECTORY', 'the directory holding the hiera data' ) { |x| options[:hiera] = x }
+        o.on( nil, "--dry-run", "perform a dry-run of the configuration generation" ) { options[:dry_run] = true }
+        o.on( '-c CONFIG', '--config CONFIG', 'an alternative hiera configuration file' ) { |x| options[:config] = x }
+        o.on( '-v', '--verbose', 'switch on verbose mode' ) { options[:verbose] = true }
         o.command :render, "render the configuration files from hiera data" do
           o.command_alias :ren
-          o.on( "-f FILTER", "--filter FILTER", "a filter to the files in the directory" ) { |x| options[:filter] = x }
-          o.on( "-d DIRECTORY", "--directory DIRECTORY", "the directory containing the configuration files" ) { |x| options[:directory] = x }
+          o.on( "-f FILTER", "--filter FILTER", "a filter to the files in the directory (defaults: #{options[:filter]})" ) { |x| options[:filter] = x }
+          o.on( "-d DIRECTORY", "--directory DIRECTORY", "the directory containing the configuration files (defaults: #{options[:config_dir]})" ) { |x| options[:config_dir] = x }
+          o.on( '-h DIRECTORY', '--hiera DIRECTORY', "override the directory holding the hiera data (defaults: #{options[:hiera_dir]})" ) { |x| options[:hiera_dir] = x }
+          o.on( '-w', '--write', 'write generated configuration files to disk: config.conf.erb -> config.conf' ) { options[:write_files] = true }
           o.on_command { options[:command] = :render }
         end
       end
