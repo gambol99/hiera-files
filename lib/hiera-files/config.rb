@@ -13,8 +13,9 @@ module HieraFiles
 :logger: noop
 :hierarchy:
   - hosts/%{hostname}
-  - locations/%{location}
-  - apps/%{app_name}
+  - environment/%{hostname}
+  - environment/%{app}
+  - apps/%{app}
   - common
 :yaml:
   :datadir: hieradata/
