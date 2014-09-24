@@ -28,7 +28,7 @@ module HieraFiles
     def render
       files( options[:config_dir], options[:filter] ) do |file|
         verbose "render file: #{file}"
-        output = hiera.render file
+        output = hiera.render file, options[:scope]
         verbose "output: \n" << output
         write_file( file, output ) if options[:write_files]
       end
@@ -77,7 +77,8 @@ module HieraFiles
         :config_dir  => './',
         :config_base => './',
         :filter      => '*.erb',
-        :verbose     => false
+        :verbose     => false,
+        :scope       => {}
       }
     end
 
@@ -92,6 +93,10 @@ module HieraFiles
           o.on( "-d DIRECTORY", "--directory DIRECTORY", "the directory containing the configuration files (defaults: #{options[:config_dir]})" ) { |x| options[:config_dir] = x }
           o.on( '-h DIRECTORY', '--hiera DIRECTORY', "override the directory holding the hiera data (defaults: #{options[:hiera_dir]})" ) { |x| options[:hiera_dir] = x }
           o.on( '-b DIRECTORY', '--base DIRECTORY', "write the generated files into this directory (defaults: #{options[:config_base]})" ) { |x| options[:config_base] = x }
+          o.on( '-e KEY=VALUE', '--entry KEY=VALUE', 'add a entry into the scope' ) do |x|
+            parser.usage "the scope entry: #{x} is invalid, must be KEY=VALUE format" unless x =~ /^(.*)=(.*)$/
+            options[:scope][$1] = $2
+          end
           o.on( '-w', '--write', 'write generated configuration files to disk: config.conf.erb -> config.conf' ) { options[:write_files] = true }
           o.on_command { options[:command] = :render }
         end

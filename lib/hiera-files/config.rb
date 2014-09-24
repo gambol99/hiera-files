@@ -10,12 +10,13 @@ module HieraFiles
 ---
 :backends:
   - yaml
-:logger: noop
+#:logger: noop
 :hierarchy:
-  - hosts/%{hostname}
-  - environment/%{hostname}
-  - environment/%{app}
-  - apps/%{app}
+  - host/%{hostname}
+  - environments/%{environment}/defaults
+  - environments/%{environment}/%{hostname}
+  - environments/%{environment}/%{app}
+  - app/%{app}
   - common
 :yaml:
   :datadir: hieradata/
