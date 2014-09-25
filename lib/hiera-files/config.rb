@@ -10,7 +10,7 @@ module HieraFiles
 ---
 :backends:
   - yaml
-#:logger: noop
+:logger: noop
 :hierarchy:
   - host/%{hostname}
   - environments/%{environment}/defaults

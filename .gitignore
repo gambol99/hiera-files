@@ -7,7 +7,7 @@
 
 *.gem
 *.rbc
-tests/generated
+tests/generate/
 /.config
 /coverage/
 /InstalledFiles

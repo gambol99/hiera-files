@@ -26,9 +26,10 @@ module HieraFiles
 
     private
     def render
+      # step: load in the scope if requested
       files( options[:config_dir], options[:filter] ) do |file|
         verbose "render file: #{file}"
-        output = hiera.render file, options[:scope]
+        output = hiera.render file, scope
         verbose "output: \n" << output
         write_file( file, output ) if options[:write_files]
       end
@@ -40,7 +41,7 @@ module HieraFiles
       # step: create the directory if need be
       ::FileUtils.mkdir_p( File.dirname( filename ) ) unless File.directory? filename
       File.open( filename, 'w' ) do |fd|
-        fd.write content  
+        fd.write content
       end
     end
 
@@ -50,6 +51,25 @@ module HieraFiles
           yield x if block_given?
         end
       end
+    end
+
+    def scope
+      @scope ||= nil
+      unless @scope
+        if options[:scope_file]
+          validate_file options[:scope_file]
+          raise ArgumentError, "the scope file: #{options[:scope_file]} does not exist"  unless File.exist? options[:scope_file]
+          raise ArgumentError, "the scope file: #{options[:scope_file]} is not readable" unless File.readable? options[:scope_file]
+          begin
+            options[:scope].merge!(YAML.load(File.read(options[:scope_file])))
+          rescue Exception => e
+            raise ArgumentError, "unable to load the scope file: #{options[:scope_file]}, error: #{e.message}"
+          end
+        else
+          @scope = options[:scope]
+        end
+      end
+      @scope
     end
 
     def hiera
@@ -93,6 +113,7 @@ module HieraFiles
           o.on( "-d DIRECTORY", "--directory DIRECTORY", "the directory containing the configuration files (defaults: #{options[:config_dir]})" ) { |x| options[:config_dir] = x }
           o.on( '-h DIRECTORY', '--hiera DIRECTORY', "override the directory holding the hiera data (defaults: #{options[:hiera_dir]})" ) { |x| options[:hiera_dir] = x }
           o.on( '-b DIRECTORY', '--base DIRECTORY', "write the generated files into this directory (defaults: #{options[:config_base]})" ) { |x| options[:config_base] = x }
+          o.on( '-s FILE', '--scope FILE', 'a yaml backed file contains the scope' ) { |x| options[:scope_file] = x }
           o.on( '-e KEY=VALUE', '--entry KEY=VALUE', 'add a entry into the scope' ) do |x|
             parser.usage "the scope entry: #{x} is invalid, must be KEY=VALUE format" unless x =~ /^(.*)=(.*)$/
             options[:scope][$1] = $2
