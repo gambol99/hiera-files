@@ -13,7 +13,7 @@ Options = {
 }
 
 files = HieraFiles.new( Options )
-puts files.render 'config.conf.erb', {}
+puts files.render './configs/config.conf.erb', {}
 
 
 
